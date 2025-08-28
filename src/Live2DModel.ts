@@ -260,6 +260,71 @@ export class Live2DModel<IM extends InternalModel = InternalModel> extends Conta
     }
 
     /**
+     * Generate speech from text using Kokoro TTS with real-time lip sync.
+     * This method provides streaming text-to-speech functionality as an alternative to the file-based speak() method.
+     * 
+     * ```js
+     * await model.speakText("Hello, I am a Live2D model with streaming speech!");
+     * 
+     * // With custom options
+     * await model.speakText("Hello world!", {
+     *     voice: "af_heart",
+     *     speed: 1.2,
+     *     volume: 0.8,
+     *     expression: "happy"
+     * });
+     * ```
+     * 
+     * @param text - The text to convert to speech
+     * @param options - Configuration options for speech generation
+     * @param options.voice - Voice style to use (default: "af")
+     * @param options.speed - Speaking speed multiplier (default: 1)
+     * @param options.volume - Audio volume (0-1, default: 0.5)
+     * @param options.expression - Expression to apply during speech
+     * @param options.resetExpression - Reset expression after speech (default: true)
+     * @param options.onFinish - Callback when speech completes
+     * @param options.onError - Callback when error occurs
+     * @returns Promise that resolves with true if speech started successfully, false otherwise
+     */
+    async speakText(
+        text: string,
+        {
+            voice = "af",
+            speed = 1,
+            volume = VOLUME,
+            expression,
+            resetExpression = true,
+            onFinish,
+            onError,
+        }: {
+            voice?: string;
+            speed?: number;
+            volume?: number;
+            expression?: number | string;
+            resetExpression?: boolean;
+            onFinish?: () => void;
+            onError?: (e: Error) => void;
+        } = {},
+    ): Promise<boolean> {
+        return this.internalModel.motionManager.speakText(text, {
+            voice: voice,
+            speed: speed,
+            volume: volume,
+            expression: expression,
+            resetExpression: resetExpression,
+            onFinish: onFinish,
+            onError: onError,
+        });
+    }
+
+    /**
+     * Stop current streaming speech generation and playback.
+     */
+    stopStreamingSpeech(): void {
+        return this.internalModel.motionManager.stopStreamingSpeech();
+    }
+
+    /**
      * Shorthand to set an expression.
      * @param id - Either the index, or the name of the expression. If not presented, a random expression will be set.
      * @return Promise that resolves with true if succeeded, with false otherwise.

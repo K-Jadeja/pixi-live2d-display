@@ -341,6 +341,137 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends util
     }
 
     /**
+     * Streaming analyzer for the current TTS audio being played.
+     */
+    currentStreamingAnalyzer?: AnalyserNode;
+
+    /**
+     * Streaming manager for text-to-speech generation.
+     */
+    kokoroStreamingManager?: import("@/streaming/KokoroStreamingManager").KokoroStreamingManager;
+
+    /**
+     * Generates speech from text using Kokoro TTS and applies lip sync.
+     * This method provides streaming text-to-speech functionality as an alternative to the file-based speak() method.
+     * 
+     * @param text - The text to convert to speech
+     * @param options - Configuration options for speech generation
+     * @param options.voice - Voice style to use (default: "af")
+     * @param options.speed - Speaking speed multiplier (default: 1)
+     * @param options.volume - Audio volume (0-1, default: 0.5)
+     * @param options.expression - Expression to apply during speech
+     * @param options.resetExpression - Reset expression after speech (default: true)
+     * @param options.onFinish - Callback when speech completes
+     * @param options.onError - Callback when error occurs
+     * @returns Promise that resolves with true if speech is started successfully, false otherwise
+     */
+    async speakText(
+        text: string,
+        {
+            voice = "af",
+            speed = 1,
+            volume = VOLUME,
+            expression,
+            resetExpression = true,
+            onFinish,
+            onError,
+        }: {
+            voice?: string;
+            speed?: number;
+            volume?: number;
+            expression?: number | string;
+            resetExpression?: boolean;
+            onFinish?: () => void;
+            onError?: (e: Error) => void;
+        } = {},
+    ): Promise<boolean> {
+        if (!config.sound) {
+            return false;
+        }
+
+        // Stop any current audio
+        if (this.currentAudio && !this.currentAudio.ended) {
+            return false;
+        }
+
+        // Stop any current streaming audio
+        if (this.kokoroStreamingManager?.isCurrentlyGenerating()) {
+            return false;
+        }
+
+        try {
+            // Initialize Kokoro streaming manager if not already done
+            if (!this.kokoroStreamingManager) {
+                const { KokoroStreamingManager } = await import("@/streaming/KokoroStreamingManager");
+                this.kokoroStreamingManager = new KokoroStreamingManager();
+                await this.kokoroStreamingManager.initialize();
+            }
+
+            // Clear any existing streaming analyzer
+            if (this.currentStreamingAnalyzer) {
+                this.currentStreamingAnalyzer = undefined;
+            }
+
+            // Set expression if provided
+            if (this.state.shouldOverrideExpression()) {
+                this.expressionManager && this.expressionManager.resetExpression();
+            }
+            if (expression && this.expressionManager) {
+                this.expressionManager.setExpression(expression);
+            }
+
+            // Generate streaming speech
+            const success = await this.kokoroStreamingManager.generateSpeech(text, {
+                voice,
+                speed,
+                volume,
+                onFinish: () => {
+                    // Reset expression if requested
+                    if (resetExpression && expression && this.expressionManager) {
+                        this.expressionManager.resetExpression();
+                    }
+                    this.playing = false;
+                    this.currentStreamingAnalyzer = undefined;
+                    onFinish?.();
+                },
+                onError: (error) => {
+                    // Reset expression if requested
+                    if (resetExpression && expression && this.expressionManager) {
+                        this.expressionManager.resetExpression();
+                    }
+                    this.playing = false;
+                    this.currentStreamingAnalyzer = undefined;
+                    onError?.(error);
+                }
+            });
+
+            if (success) {
+                // Get the analyzer for lip sync
+                this.currentStreamingAnalyzer = this.kokoroStreamingManager.getAnalyser() || undefined;
+                this.playing = true;
+            }
+
+            return success;
+
+        } catch (error) {
+            logger.warn(this.tag, "Failed to start streaming speech", error);
+            onError?.(error as Error);
+            return false;
+        }
+    }
+
+    /**
+     * Stop current streaming speech generation and playback.
+     */
+    stopStreamingSpeech(): void {
+        if (this.kokoroStreamingManager) {
+            this.kokoroStreamingManager.stop();
+        }
+        this.currentStreamingAnalyzer = undefined;
+        this.playing = false;
+    }
+
+    /**
      * Starts a motion as given priority.
      * @param group - The motion group.
      * @param index - Index in the motion group.
@@ -618,7 +749,10 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends util
      *
      */
     mouthSync(): number {
-        if (this.currentAnalyzer) {
+        // Prioritize streaming analyzer over traditional audio analyzer
+        if (this.currentStreamingAnalyzer) {
+            return SoundManager.analyze(this.currentStreamingAnalyzer);
+        } else if (this.currentAnalyzer) {
             return SoundManager.analyze(this.currentAnalyzer);
         } else {
             return 0;
@@ -634,6 +768,14 @@ export abstract class MotionManager<Motion = any, MotionSpec = any> extends util
         this.emit("destroy");
 
         this.stopAllMotions();
+        
+        // Clean up streaming resources
+        if (this.kokoroStreamingManager) {
+            this.kokoroStreamingManager.dispose();
+            this.kokoroStreamingManager = undefined;
+        }
+        this.currentStreamingAnalyzer = undefined;
+        
         this.expressionManager?.destroy();
 
         const self = this as Mutable<Partial<this>>;
