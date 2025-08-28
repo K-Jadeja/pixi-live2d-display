@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live2D Streaming Speech Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .demo-area {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            text-align: center;
+        }
+        
+        #canvas {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .controls {
+            flex: 0 0 350px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        textarea, select, input[type="range"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        textarea {
+            height: 80px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .speak-btn {
+            background: #28a745;
+            color: white;
+        }
+        
+        .speak-btn:hover:not(:disabled) {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        
+        .speak-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .stop-btn {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .stop-btn:hover:not(:disabled) {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+        
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .status.ready {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.speaking {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .speed-display {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .examples {
+            margin-top: 20px;
+        }
+        
+        .example-btn {
+            display: block;
+            width: 100%;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+        
+        .example-btn:hover {
+            background: #5a6268;
+        }
+        
+        .info {
+            margin-top: 30px;
+            padding: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .info h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .info ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .info li {
+            margin-bottom: 5px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Live2D Streaming Speech Demo</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Experience real-time text-to-speech with synchronized lip movements using KokoroJS TTS integration
+        </p>
+        
+        <div class="demo-area">
+            <div class="canvas-container">
+                <canvas id="canvas" width="400" height="600"></canvas>
+                <p style="color: #666; margin-top: 10px;">
+                    <em>Live2D model will appear here when loaded</em>
+                </p>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="textInput">Text to Speak:</label>
+                    <textarea 
+                        id="textInput" 
+                        placeholder="Enter any text to be spoken by the Live2D model with synchronized lip movements..."
+                    >Hello! I am a Live2D model with streaming speech capabilities. I can speak any text you give me with realistic lip sync!</textarea>
+                </div>
+                
+                <div class="control-group">
+                    <label for="voiceSelect">Voice Style:</label>
+                    <select id="voiceSelect">
+                        <option value="af">American Female</option>
+                        <option value="af_heart" selected>American Female (Heart)</option>
+                        <option value="am">American Male</option>
+                        <option value="bf">British Female</option>
+                        <option value="bm">British Male</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="expressionSelect">Expression:</label>
+                    <select id="expressionSelect">
+                        <option value="">No Expression</option>
+                        <option value="happy" selected>Happy</option>
+                        <option value="sad">Sad</option>
+                        <option value="surprised">Surprised</option>
+                        <option value="angry">Angry</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label for="speedRange">Speaking Speed:</label>
+                    <input type="range" id="speedRange" min="0.5" max="2" step="0.1" value="1">
+                    <div class="speed-display" id="speedDisplay">1.0x</div>
+                </div>
+                
+                <div class="button-group">
+                    <button id="speakBtn" class="speak-btn" disabled>Speak</button>
+                    <button id="stopBtn" class="stop-btn" disabled>Stop</button>
+                </div>
+                
+                <div id="status" class="status ready">Loading Live2D model...</div>
+                
+                <div class="examples">
+                    <label>Quick Examples:</label>
+                    <button class="example-btn" data-text="Hello! Welcome to the Live2D streaming speech demo!" data-voice="af_heart" data-expression="happy">Welcome Message</button>
+                    <button class="example-btn" data-text="This technology combines Kokoro TTS with Live2D lip sync for amazing results!" data-voice="af" data-expression="excited">Tech Explanation</button>
+                    <button class="example-btn" data-text="I can speak with different voices and expressions. This is so cool!" data-voice="am" data-expression="surprised">Different Voice</button>
+                    <button class="example-btn" data-text="The lip synchronization happens in real-time as the audio is generated." data-voice="bf" data-expression="">Technical Details</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info">
+            <h3>🚀 Features</h3>
+            <ul>
+                <li><strong>Real-time TTS:</strong> Text converted to speech with Kokoro AI model</li>
+                <li><strong>Live Lip Sync:</strong> Mouth movements synchronized with generated audio</li>
+                <li><strong>Multiple Voices:</strong> American/British, Male/Female voice options</li>
+                <li><strong>Expression Control:</strong> Facial expressions during speech</li>
+                <li><strong>Speed Control:</strong> Adjustable speaking speed (0.5x - 2x)</li>
+                <li><strong>Streaming Audio:</strong> Low-latency real-time audio processing</li>
+            </ul>
+            
+            <h3>💡 How to Use</h3>
+            <ul>
+                <li>Enter text in the textarea above</li>
+                <li>Select voice style and expression</li>
+                <li>Adjust speaking speed if desired</li>
+                <li>Click "Speak" to generate speech with lip sync</li>
+                <li>Use "Stop" to interrupt speech at any time</li>
+                <li>Try the quick examples for demonstration</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module">
+        // This is a demo HTML page - in a real implementation, you would:
+        // 1. Import the actual pixi-live2d-display library
+        // 2. Load a real Live2D model
+        // 3. Implement the streaming TTS integration
+        
+        // Mock implementation for demonstration
+        let isSpeaking = false;
+        let model = null;
+        
+        // UI elements
+        const textInput = document.getElementById('textInput');
+        const voiceSelect = document.getElementById('voiceSelect');
+        const expressionSelect = document.getElementById('expressionSelect');
+        const speedRange = document.getElementById('speedRange');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const speakBtn = document.getElementById('speakBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const status = document.getElementById('status');
+        const canvas = document.getElementById('canvas');
+        
+        // Initialize canvas context for demo
+        const ctx = canvas.getContext('2d');
+        
+        // Update speed display
+        speedRange.addEventListener('input', () => {
+            speedDisplay.textContent = `${speedRange.value}x`;
+        });
+        
+        // Example buttons
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                textInput.value = btn.dataset.text;
+                if (btn.dataset.voice) voiceSelect.value = btn.dataset.voice;
+                if (btn.dataset.expression) expressionSelect.value = btn.dataset.expression;
+            });
+        });
+        
+        // Mock model loading
+        setTimeout(() => {
+            updateStatus('ready', 'Ready to speak!');
+            speakBtn.disabled = false;
+            
+            // Draw placeholder model
+            drawPlaceholderModel();
+        }, 2000);
+        
+        // Speak button handler
+        speakBtn.addEventListener('click', async () => {
+            const text = textInput.value.trim();
+            if (!text) {
+                updateStatus('error', 'Please enter some text');
+                return;
+            }
+            
+            startSpeaking(text);
+        });
+        
+        // Stop button handler
+        stopBtn.addEventListener('click', () => {
+            stopSpeaking();
+        });
+        
+        function startSpeaking(text) {
+            isSpeaking = true;
+            speakBtn.disabled = true;
+            stopBtn.disabled = false;
+            updateStatus('speaking', 'Speaking...');
+            
+            // Mock speech duration based on text length
+            const duration = Math.max(text.length * 50, 2000);
+            
+            // Animate lip movement
+            animateLipSync(duration);
+            
+            setTimeout(() => {
+                if (isSpeaking) {
+                    stopSpeaking();
+                }
+            }, duration);
+        }
+        
+        function stopSpeaking() {
+            isSpeaking = false;
+            speakBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStatus('ready', 'Speech completed');
+        }
+        
+        function updateStatus(type, message) {
+            status.className = `status ${type}`;
+            status.textContent = message;
+        }
+        
+        function drawPlaceholderModel() {
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw simple character outline
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 3;
+            
+            // Head
+            ctx.beginPath();
+            ctx.ellipse(200, 150, 80, 100, 0, 0, 2 * Math.PI);
+            ctx.stroke();
+            
+            // Eyes
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.ellipse(170, 130, 8, 12, 0, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(230, 130, 8, 12, 0, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Mouth
+            drawMouth(false);
+            
+            // Body
+            ctx.strokeStyle = '#666';
+            ctx.beginPath();
+            ctx.rect(150, 250, 100, 200);
+            ctx.stroke();
+            
+            // Text
+            ctx.fillStyle = '#999';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Live2D Model Placeholder', 200, 500);
+            ctx.fillText('(Real model would load here)', 200, 520);
+        }
+        
+        function drawMouth(isOpen) {
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(180, 170, 40, 20);
+            
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            if (isOpen) {
+                // Open mouth (oval)
+                ctx.ellipse(200, 180, 15, 8, 0, 0, 2 * Math.PI);
+                ctx.fillStyle = '#333';
+                ctx.fill();
+            } else {
+                // Closed mouth (line)
+                ctx.moveTo(185, 180);
+                ctx.lineTo(215, 180);
+            }
+            ctx.stroke();
+        }
+        
+        function animateLipSync(duration) {
+            const startTime = Date.now();
+            
+            function animate() {
+                if (!isSpeaking) return;
+                
+                const elapsed = Date.now() - startTime;
+                if (elapsed >= duration) return;
+                
+                // Simple mouth animation
+                const isOpen = Math.sin(elapsed * 0.02) > 0;
+                drawMouth(isOpen);
+                
+                requestAnimationFrame(animate);
+            }
+            
+            animate();
+        }
+        
+        // Real implementation would look like this:
+        /*
+        import { Live2DModel } from "pixi-live2d-display";
+        import { Application } from "@pixi/app";
+        
+        const app = new Application({ view: canvas });
+        const model = await Live2DModel.from("path/to/model.json");
+        app.stage.addChild(model);
+        
+        async function startSpeaking(text) {
+            await model.speakText(text, {
+                voice: voiceSelect.value,
+                expression: expressionSelect.value,
+                speed: parseFloat(speedRange.value),
+                volume: 0.8,
+                onFinish: () => stopSpeaking(),
+                onError: (error) => updateStatus('error', error.message)
+            });
+        }
+        
+        function stopSpeaking() {
+            model.stopStreamingSpeech();
+        }
+        */
+    </script>
+</body>
+</html>
