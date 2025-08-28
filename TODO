@@ -1,0 +1,3 @@
+- the motion and emotion buttons stop working after we make the model say something. they start working again if we change model and reload it. fix this
+- I should be able to make the live2d model do expressions and motions while it is speaking but it get's stun locked and doesn't move during and after speech
+- the above is fixed with cyan and shizuku but the error is happening with my haru model(cubism 4) where i am not able to use the expressions or motions while it is speaking
