@@ -1,0 +1,62 @@
+{
+  "name": "pixi-live2d-streaming-tts",
+  "version": "1.0.0",
+  "description": "Streaming TTS and Lip Sync plugin for pixi-live2d-display with VtuberGame integration",
+  "main": "dist/index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.js"
+    },
+    "./kokoro-deps": {
+      "types": "./dist/kokoro-deps.d.ts",
+      "import": "./dist/kokoro-deps.es.js",
+      "require": "./dist/kokoro-deps.js"
+    }
+  },
+  "scripts": {
+    "build": "vite build && tsc --emitDeclarationOnly",
+    "dev": "vite build --watch",
+    "setup": "node scripts/setup-kokoro.js",
+    "test": "vitest",
+    "lint": "eslint src --ext .ts"
+  },
+  "files": [
+    "dist",
+    "scripts",
+    "kokoro-assets",
+    "README.md",
+    "INTEGRATION_GUIDE.md"
+  ],
+  "keywords": [
+    "live2d",
+    "pixi",
+    "tts",
+    "lip-sync",
+    "streaming",
+    "kokoro",
+    "vtuber"
+  ],
+  "author": "K-Jadeja",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/K-Jadeja/pixi-live2d-display.git",
+    "directory": "vtubergame-integration"
+  },
+  "peerDependencies": {
+    "pixi.js": ">=7.0.0",
+    "pixi-live2d-display": ">=0.4.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "vitest": "^1.4.0",
+    "eslint": "^8.51.0",
+    "@typescript-eslint/eslint-plugin": "^6.7.4",
+    "@typescript-eslint/parser": "^6.7.4"
+  }
+}
